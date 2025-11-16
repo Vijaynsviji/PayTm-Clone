@@ -1,15 +1,13 @@
 
 import express from 'express';
-import Users from "../db.js";
+import {Account, Users} from "../db.js";
 import UserAuthMiddleWare from "./UserAuthMiddle.js"
 import jwt from 'jsonwebtoken';
 import 'dotenv/config';
+import { GetToken } from '../Util.js';
 
 
 const UserRouter  = express.Router();
-
-
-
 
 UserRouter.post("/signup",async (req,res)=>{
     const UserJson = req.body;
@@ -19,11 +17,15 @@ UserRouter.post("/signup",async (req,res)=>{
             res.send("UserName Already Exits, Please SignIn");
         }
     }
-    await Users.create({
+    const User = await Users.create({
         firstName: UserJson?.firstName,
         secondName: UserJson?.secondName,
         userName: UserJson?.userName,
         password: UserJson?.password,
+    })
+    await Account.create({
+        userId: User?._id,
+        balance: Math.random() * 1000,
     })
     res.send("Sign up Success");
 })
@@ -36,7 +38,7 @@ UserRouter.post("/signin",async (req,res)=>{
     if(user){
         if(user?.password==password){
             console.log(process?.env.JWT_SECRETE);
-            const token = jwt.sign({userName:user?.userName},process?.env.JWT_SECRETE);
+            const token = jwt.sign({userId:user?._id},process?.env.JWT_SECRETE);
             res.status(200).json({
                 code: 200,
                 message: "Sign in Success",
@@ -46,12 +48,13 @@ UserRouter.post("/signin",async (req,res)=>{
             });
             return;
         }else{
-            res.send("Please Enter valid Password");
+            res.status(404).json({
+                message: "Please Enter valid Password"});
             return;
         }
     }
 
-    res.send("UserName not found, Please Register")
+    res.status(404).json({message: "UserName not found, Please Register"})
 })
 
 UserRouter.use(UserAuthMiddleWare);
@@ -67,6 +70,54 @@ UserRouter.post("/updateInfo/:userName", async(req,res)=>{
         return;
     }
     res.send("Update Successfull");
+})
+
+UserRouter.get("/verifyUser",async(req,res)=>{
+    try{
+        const userToken = GetToken(req?.headers.authorization);
+        const userJson = jwt.verify(userToken,process?.env.JWT_SECRETE);
+        const user = await Users.findOne({_id:userJson?.userId});
+        return res.status(200).json({
+            userData: {
+                firstName: user?.firstName,
+                secondName: user?.secondName,
+                userName: user?.userName,
+                userId: user?._id
+            }
+        })
+    }catch(e){
+        console.log(e);
+    }
+})
+
+UserRouter.get("/bulk", async (req,res)=>{
+    const filter = req?.query?.filter;
+    const users = await Users?.find({
+        $or:[
+            {
+                firstName:{
+                    "$regex": filter
+                }
+            },{
+                secondName:{
+                    "$regex": filter
+                }
+            }
+        ]
+    })
+
+    console.log(users);
+
+    res.status(200).json({
+        user: users.map(item=>(
+        {
+        firstName: item?.firstName,
+        secondName: item?.secondName,
+        userName: item?.userName,
+        id: item?._id
+        })
+        )
+    })
 })
 
 export default UserRouter;

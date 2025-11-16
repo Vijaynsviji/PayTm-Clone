@@ -16,11 +16,11 @@ export default function UserAuthMiddleWare(req,res,next){
                 next();
                 return;
             }catch(e){
-                res.send("Token Invalid");
+                res.status(404).json({message: "Token Invalid"});
                 return;
             }
         }
     }
-    res.send("Please SignUp Before Logging In");
+    res.status(404).json({message:"Please SignUp Before Logging In"});
     return;
 }
