@@ -77,12 +77,14 @@ UserRouter.get("/verifyUser",async(req,res)=>{
         const userToken = GetToken(req?.headers.authorization);
         const userJson = jwt.verify(userToken,process?.env.JWT_SECRETE);
         const user = await Users.findOne({_id:userJson?.userId});
+        const account = await Account.findOne({userId:user?._id});
         return res.status(200).json({
             userData: {
                 firstName: user?.firstName,
                 secondName: user?.secondName,
                 userName: user?.userName,
-                userId: user?._id
+                userId: user?._id,
+                balance: account?.balance
             }
         })
     }catch(e){

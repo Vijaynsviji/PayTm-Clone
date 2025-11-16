@@ -92,12 +92,13 @@ AccountRouter.post("/transfer",async(req,res)=>{
     const To = req.body.ToId;
     const Amount = req.body.Amount;
     if(!To || !Amount){
-        res.send("Please fill all the values");
+        res.status(404).json({message: "Please fill all the values"});
+        return;
     }
 
     const User = await Users.findOne({_id:To});
     if(!User){
-        res.send("Not A Valid User to Transfer money");
+        res.status(404).json({message:"Not A Valid User to Transfer money"});
         return;
     }
 
@@ -106,7 +107,7 @@ try {
   const userBalance = await Account.findOne({ userId:userId });
 
   if (!userBalance || userBalance.balance < Amount) {
-    return res.send("Insufficient Balance");
+    return res.status(404).json({message: "Insufficient Balance"});
     }
 
   await Account.updateOne(
@@ -118,7 +119,7 @@ try {
     { userId: To },
     { $inc: { balance: Amount } }
   );
-  return res.send("Transfer Successful");
+  return res.status(200).json({message:"Transfer Successful"});
 
 } catch(err) {
   console.error(err);
